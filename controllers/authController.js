@@ -10,7 +10,7 @@ const signToken = (userId) => {
     });
 }
 
-const createSendToken = (user, statusCode, res, (message = "Success")=>{
+const createSendToken = (user, statusCode, res, message = "Success")=>{
     const token = signToken(user._id);
 
     const userResponse = {
@@ -31,7 +31,7 @@ const createSendToken = (user, statusCode, res, (message = "Success")=>{
             user : userResponse
         }
     })
-});
+};
 
 
 // Register controller for user
@@ -123,7 +123,7 @@ const updateProfile  = catchAsync(async(req,res,next)=>{
     }
   })
 
-  const updateUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
+  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
     new: true,
     runValidators: true,
   }).select('-password');

@@ -2,57 +2,63 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
-
+const mongoose = require("mongoose");
+const { errorHandler, notFound } = require("./middleware/errorHandler");
 
 dotenv.config();
 
 const app = express();
 
+connectDB();
 
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === "production"
+        ? "https://your-domain.com"
+        : "http://localhost:3000",
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-
-async function startServer() {
-  try {
-    await connectDB();
-    const User = require("./models/User");
-    const Project = require("./models/Project");
-    const File = require("./models/File");
-
-
-    app.get("/api/test", async (req, res) => {
-      try {
-        const userCount = await User.countDocuments();
-        const projectCount = await Project.countDocuments();
-        const fileCount = await File.countDocuments();
-
-        res.json({
-          message: "3D Bust Maker API - Database Connected",
-          database: {
-            users: userCount,
-            projects: projectCount,
-            files: fileCount,
-          },
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error) {
-        res.status(500).json({
-          error: "Database connection test failed",
-          details: error.message,
-        });
-      }
-    });
-
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("Server startup failed:", error);
-    process.exit(1);
-  }
+if (process.env.NODE_ENV === "development") {
+  app.use((req, res, next) => {
+    console.log(
+      `${req.method} ${req.originalUrl} - ${new Date().toISOString()}`
+    );
+    next();
+  });
 }
 
+// Routes
+app.get('/api/health',(req,res) => {
+    res.status(200).json({
+      success: true,
+      message: "3D Bust Maker API is running",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+    });
+})
+app.use('/api/auth',require('./routes/auth'));
+app.use('/api/projects',require('./routes/projects'))
+app.use('/{*splat}',notFound);
+app.use(errorHandler)
 
-startServer();
+
+process.on("SIGTERM", () => {
+  console.log("👋 SIGTERM received, shutting down gracefully");
+  mongoose.connection.close(() => {
+    console.log("Database connection closed");
+    process.exit(0);
+  });
+});
+
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+});
