@@ -70,6 +70,7 @@ if (process.env.NODE_ENV === "development"){
   });
 app.use('/api/auth',require('./routes/auth'));
 app.use('/api/projects',require('./routes/projects'))
+app.use('/api/upload',require('./routes/upload'))
 app.use('/{*splat}',notFound);
 app.use(errorHandler);
 
