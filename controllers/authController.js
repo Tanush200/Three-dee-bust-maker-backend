@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs')
+const crypto = require('crypto')
 const User = require('../models/User');
+const { sendVerificationEmail } = require('../services/emailService')
 const {AppError,catchAsync} = require('../middleware/errorHandler')
 
 
@@ -52,11 +54,11 @@ const register = catchAsync(async (req,res,next) => {
       }
 
       const existingUser = await User.findOne({
-        $or : [{email} , {username}]
-      })
+        $or: [{ email: email.toLowerCase() }, { username }],
+      });
 
       if(existingUser){
-        const field = existingUser.email === email ? 'email' : 'username';
+        const field = existingUser.email === email.toLowerCase() ? 'email' : 'username';
          return next(
            new AppError(`User with this ${field} already exists`, 400)
          );
@@ -64,10 +66,34 @@ const register = catchAsync(async (req,res,next) => {
 
       const newUser = await User.create({
         username,
-        email,
+        email:email.toLowerCase(),
         password
       })
 
+      const verificationToken = crypto.randomBytes(32).toString('hex')
+      const jwtToken = jwt.sign(
+        {
+          userId: newUser._id,
+          verificationToken: verificationToken,
+          email: newUser.email,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "24h" }
+
+      );
+
+        newUser.emailVerificationToken = crypto
+           .createHash("sha256")
+           .update(verificationToken)
+           .digest("hex");
+        newUser.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+        await newUser.save({ validateBeforeSave: false });
+
+        try {
+          await sendVerificationEmail(newUser,jwtToken)
+        } catch (error) {
+          console.error("Failed to send verification email:", error);
+        }
       createSendToken(newUser, 201, res, "User registered successfully");
 })
 
@@ -80,15 +106,34 @@ const login = catchAsync(async (req, res, next) => {
   if (!email || !password) {
     return next(new AppError("Please provide email and password", 400));
   }
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email.toLowerCase() });
 
   if (!user || !(await user.comparePassword(password))) {
+    if(user){
+      await user.incLoginAttempts();
+    }
     return next(new AppError("Incorrect email or password", 401));
+  }
+
+  if(user.isLocked()){
+    return next(
+      new AppError(
+        "Account is temporarily locked due to too many failed login attempts. Please try again later.",
+        423
+      )
+    );
   }
 
   if (!user.isActive) {
     return next(new AppError("Your account has been deactivated", 401));
   }
+
+  if(user.loginAttempts && user.loginAttempts > 0){
+    await user.resetLoginAttempts();
+  }
+
+  user.lastLoginAt = new Date();
+  await user.save({validateBeforeSave:false})
 
   createSendToken(user, 200, res, "Login successful");
 });

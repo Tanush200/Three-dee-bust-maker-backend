@@ -3,7 +3,10 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const mongoose = require("mongoose");
-const { errorHandler, notFound } = require("./middleware/errorHandler");
+const helmet = require('helmet')
+const morgan = require('morgan')
+const { errorHandler , notFound } = require('./middleware/errorHandler')
+const {generalLimiter} = require('./middleware/rateLimiter')
 
 dotenv.config();
 
@@ -11,40 +14,64 @@ const app = express();
 
 connectDB();
 
+app.use(helmet());
+app.use(generalLimiter)
+
+// app.use(
+//   cors({
+//     origin:
+//       process.env.NODE_ENV === "production"
+//         ? "https://your-domain.com"
+//         : "http://localhost:3000",
+//     credentials: true,
+//   })
+// );
+
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? "https://your-domain.com"
-        : "http://localhost:3000",
-    credentials: true,
+    origin: function (origin,callback){
+      const allowedOrigins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        process.env.CLIENT_URL,
+      ];
+      if(!origin || allowedOrigins.includes(origin)){
+        callback(null , true)
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials:true
   })
-);
+)
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-if (process.env.NODE_ENV === "development") {
-  app.use((req, res, next) => {
-    console.log(
-      `${req.method} ${req.originalUrl} - ${new Date().toISOString()}`
-    );
-    next();
-  });
-}
+// if (process.env.NODE_ENV === "development") {
+//   app.use((req, res, next) => {
+//     console.log(
+//       `${req.method} ${req.originalUrl} - ${new Date().toISOString()}`
+//     );
+//     next();
+//   });
+// }
 
-// Routes
-app.get('/api/health',(req,res) => {
+if (process.env.NODE_ENV === "development"){
+  app.use(morgan('dev'));
+}
+  // Routes
+  app.get("/api/health", (req, res) => {
     res.status(200).json({
       success: true,
       message: "3D Bust Maker API is running",
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
     });
-})
+  });
 app.use('/api/auth',require('./routes/auth'));
 app.use('/api/projects',require('./routes/projects'))
 app.use('/{*splat}',notFound);
-app.use(errorHandler)
+app.use(errorHandler);
 
 
 process.on("SIGTERM", () => {

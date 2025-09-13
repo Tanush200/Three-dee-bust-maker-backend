@@ -49,7 +49,7 @@ const createProject = catchAsync(async (req,res,next)=>{
       title,
       description,
       userId: req.user.id,
-      inputImageUrl: "placeholder", // Will be updated when image is uploaded
+      inputImageUrl: "placeholder", // this Will be updated when image is uploaded via uploadthing
       inputImageKey: "placeholder",
     });
 
