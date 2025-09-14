@@ -19,11 +19,13 @@ const ProjectSchema = new mongoose.Schema({
   },
   inputImageUrl: {
     type: String,
-    required: true,
+    required: false,
+    default:null
   },
   inputImageKey: {
     type: String, // UploadThing file key
-    required: true,
+    required: false,
+    default:null
   },
   status: {
     type: String,

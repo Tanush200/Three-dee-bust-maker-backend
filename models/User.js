@@ -36,7 +36,7 @@ const UserSchema = new mongoose.Schema(
     },
     credits: {
       type: Number,
-      default: 3,
+      default: 5,
     },
     isActive: {
       type: Boolean,

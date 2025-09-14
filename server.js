@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require('path');
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
@@ -7,6 +8,8 @@ const helmet = require('helmet')
 const morgan = require('morgan')
 const { errorHandler , notFound } = require('./middleware/errorHandler')
 const {generalLimiter} = require('./middleware/rateLimiter')
+const uploadRoute = require('./routes/upload')
+
 
 dotenv.config();
 
@@ -14,6 +17,8 @@ const app = express();
 
 connectDB();
 
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(helmet());
 app.use(generalLimiter)
 
@@ -70,7 +75,7 @@ if (process.env.NODE_ENV === "development"){
   });
 app.use('/api/auth',require('./routes/auth'));
 app.use('/api/projects',require('./routes/projects'))
-app.use('/api/upload',require('./routes/upload'))
+app.use('/api/upload',uploadRoute)
 app.use('/{*splat}',notFound);
 app.use(errorHandler);
 
@@ -89,4 +94,16 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+});
+
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+  console.log(`📁 Static files: /uploads`);
+  console.log(`🔗 Routes registered:`);
+  console.log(`   - GET /api/health`);
+  console.log(`   - /api/auth`);
+  console.log(`   - /api/projects`);
+  console.log(`   - /api/upload`);
 });

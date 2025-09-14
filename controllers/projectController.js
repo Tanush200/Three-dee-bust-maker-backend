@@ -33,11 +33,11 @@ const getProject = catchAsync(async(req,res,next) => {
 
 
 const createProject = catchAsync(async (req,res,next)=>{
-    if(req.user.credits <= 0){
-      return next(
-        new AppError("Insufficient credits. Please upgrade your plan.", 400)
-      );  
-    }
+    // if(req.user.credits <= 0){
+    //   return next(
+    //     new AppError("Insufficient credits. Please upgrade your plan.", 400)
+    //   );  
+    // }
 
     const {title , description} = req.body;
 
@@ -49,8 +49,8 @@ const createProject = catchAsync(async (req,res,next)=>{
       title,
       description,
       userId: req.user.id,
-      inputImageUrl: "placeholder", // this Will be updated when image is uploaded via uploadthing
-      inputImageKey: "placeholder",
+      inputImageUrl: "", // this Will be updated when image is uploaded via uploadthing
+      inputImageKey: "",
     });
 
      res.status(201).json({

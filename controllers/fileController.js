@@ -45,7 +45,7 @@ const updateFileMetadata = catchAsync(async(req,res,next)=>{
     }
 
     if(tags && Array.isArray(tags)){
-        file.tags;
+        file.tags = tags
     }
 
     await file.save()
