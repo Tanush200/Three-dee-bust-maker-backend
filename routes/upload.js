@@ -1,11 +1,8 @@
-
-
-
-
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const User = require("../models/User");
 
 // ✅ COMMENT OUT UPLOADTHING IMPORTS TO TEST
 // const { uploadRouter } = require('../uploadthing/core');
@@ -111,6 +108,17 @@ router.post(
       });
 
       console.log("💾 File record saved to database:", fileRecord._id);
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user.id,
+        {
+          $inc: { credits: -1 },
+        },
+        { new: true }
+      );
+
+        console.log('💳 Credit deducted! User credits:', req.user.credits, '→', updatedUser.credits);
+      
+      
 
       res.status(200).json({
         success: true,
@@ -123,6 +131,8 @@ router.post(
           size: req.file.size,
           mimeType: req.file.mimetype,
           uploadMethod: "direct",
+          creditsRemaining: updatedUser.credits, // ✅ Include updated credits
+          creditsUsed: 1,
         },
       });
     } catch (error) {
@@ -143,256 +153,13 @@ router.post(
   })
 );
 
-
-
-// router.post(
-//   "/uploadthing",
-//   auth,
-//   upload.single("files"),
-//   catchAsync(async (req, res, next) => {
-//     console.log("🔄 Mock UploadThing route called");
-
-//     if (!req.file) {
-//       return next(new AppError("No file uploaded to mock UploadThing", 400));
-//     }
-
-//     if (req.user.credits <= 0) {
-//       try {
-//         fs.unlinkSync(req.file.path);
-//       } catch (e) {}
-//       return next(new AppError("Insufficient credits", 403));
-//     }
-
-//     try {
-//       // Save to database like UploadThing would
-//       const fileRecord = await File.create({
-//         filename: req.file.filename,
-//         originalName: req.file.originalname,
-//         uploadThingKey: `mock-${Date.now()}`,
-//         uploadThingUrl: `/uploads/${req.file.filename}`,
-//         fileType: "image",
-//         mimeType: req.file.mimetype,
-//         size: req.file.size,
-//         userId: req.user.id,
-//         metadata: {
-//           format: req.file.mimetype.split("/")[1],
-//           uploadMethod: "uploadthing", // ✅ FIXED: Use valid enum value
-//         },
-//       });
-
-//       console.log("✅ Mock UploadThing file saved:", fileRecord._id);
-
-//       // Return UploadThing-like response
-//       res.status(200).json({
-//         fileId: fileRecord._id.toString(),
-//         url: `/uploads/${req.file.filename}`,
-//         key: `mock-${Date.now()}`,
-//         success: true,
-//         message: "Mock UploadThing upload successful",
-//       });
-//     } catch (error) {
-//       console.error("❌ Mock UploadThing error:", error);
-//       try {
-//         fs.unlinkSync(req.file.path);
-//       } catch (e) {}
-//       return next(new AppError("Mock UploadThing failed", 500));
-//     }
-//   })
-// );
-
-// =============================================================================
-// ✅ MULTIPLE IMPORT STRATEGIES FOR UPLOADTHING
-// =============================================================================
-
-// let uploadthingHandler = null;
-// let uploadthingError = null;
-
-// try {
-//   console.log('🔍 Starting UploadThing import diagnostics...');
-  
-//   // First check if the uploadthing package exists
-//   let uploadthingPackage;
-//   try {
-//     uploadthingPackage = require('uploadthing/package.json');
-//     console.log('✅ UploadThing package found, version:', uploadthingPackage.version);
-//   } catch (e) {
-//     throw new Error('UploadThing package not found: ' + e.message);
-//   }
-
-//   // Check if our core module loads
-//   const { uploadRouter } = require('../uploadthing/core');
-//   console.log('✅ Core uploadRouter loaded with routes:', Object.keys(uploadRouter));
-
-//   // Try multiple import strategies for createRouteHandler
-//   let createRouteHandler = null;
-//   let importMethod = null;
-
-//   // Strategy 1: Direct require with destructuring
-//   try {
-//     const serverModule = require("uploadthing/server");
-//     console.log('✅ Strategy 1: Server module loaded');
-//     console.log('Available exports:', Object.keys(serverModule));
-    
-//     createRouteHandler = serverModule.createRouteHandler;
-//     if (createRouteHandler && typeof createRouteHandler === 'function') {
-//       importMethod = 'destructuring';
-//       console.log('✅ Strategy 1: createRouteHandler found via destructuring');
-//     } else {
-//       throw new Error('createRouteHandler not found in exports or not a function');
-//     }
-//   } catch (e1) {
-//     console.log('❌ Strategy 1 failed:', e1.message);
-
-//     // Strategy 2: Default import
-//     try {
-//       const uploadthingServer = require("uploadthing/server");
-//       createRouteHandler = uploadthingServer.default?.createRouteHandler || uploadthingServer.createRouteHandler;
-//       if (createRouteHandler && typeof createRouteHandler === 'function') {
-//         importMethod = 'default';
-//         console.log('✅ Strategy 2: createRouteHandler found via default');
-//       } else {
-//         throw new Error('createRouteHandler not found in default export');
-//       }
-//     } catch (e2) {
-//       console.log('❌ Strategy 2 failed:', e2.message);
-
-//       // Strategy 3: Try the main package
-//       try {
-//         const mainPackage = require("uploadthing");
-//         createRouteHandler = mainPackage.createRouteHandler;
-//         if (createRouteHandler && typeof createRouteHandler === 'function') {
-//           importMethod = 'main-package';
-//           console.log('✅ Strategy 3: createRouteHandler found in main package');
-//         } else {
-//           throw new Error('createRouteHandler not found in main package');
-//         }
-//       } catch (e3) {
-//         console.log('❌ Strategy 3 failed:', e3.message);
-
-//         // Strategy 4: Manual path construction
-//         try {
-//           const path = require('path');
-//           const uploadthingPath = path.join(__dirname, '../node_modules/uploadthing/server');
-//           const serverFile = require(uploadthingPath);
-//           createRouteHandler = serverFile.createRouteHandler;
-//           if (createRouteHandler && typeof createRouteHandler === 'function') {
-//             importMethod = 'manual-path';
-//             console.log('✅ Strategy 4: createRouteHandler found via manual path');
-//           } else {
-//             throw new Error('createRouteHandler not found via manual path');
-//           }
-//         } catch (e4) {
-//           console.log('❌ Strategy 4 failed:', e4.message);
-//           throw new Error(`All import strategies failed: ${e1.message} | ${e2.message} | ${e3.message} | ${e4.message}`);
-//         }
-//       }
-//     }
-//   }
-
-//   if (!createRouteHandler || typeof createRouteHandler !== 'function') {
-//     throw new Error(`createRouteHandler is ${typeof createRouteHandler}, expected function`);
-//   }
-
-//   console.log(`✅ createRouteHandler successfully imported via ${importMethod}`);
-
-//   // Create the route handler
-//   uploadthingHandler = createRouteHandler({
-//     router: uploadRouter,
-//   });
-
-//   console.log('✅ UploadThing handler created successfully');
-//   console.log('Handler type:', typeof uploadthingHandler);
-
-// } catch (error) {
-//   console.error('❌ UploadThing setup completely failed:', error.message);
-//   uploadthingError = error.message;
-// }
-
-// // Register routes (same as before)
-// if (uploadthingHandler && !uploadthingError) {
-//   console.log('✅ Registering REAL UploadThing routes...');
-  
-//   if (typeof uploadthingHandler === 'function') {
-//     router.all("/uploadthing", (req, res, next) => {
-//       console.log('🌐 REAL UploadThing route hit:', {
-//         method: req.method,
-//         url: req.url,
-//       });
-//       return uploadthingHandler(req, res, next);
-//     });
-    
-//     console.log("✅ REAL UploadThing registered successfully!");
-    
-//   } else if (uploadthingHandler.GET && uploadthingHandler.POST) {
-//     router.get("/uploadthing", uploadthingHandler.GET);
-//     router.post("/uploadthing", uploadthingHandler.POST);
-//     console.log("✅ REAL UploadThing registered with GET/POST handlers!");
-//   }
-  
-// } else {
-//   console.log('🚫 Using fallback mock due to error:', uploadthingError);
-  
-//   // Your existing mock route (keep it as fallback)
-//   router.post("/uploadthing", auth, upload.single("files"), catchAsync(async (req, res, next) => {
-//     console.log("🔄 FALLBACK: Mock UploadThing route");
-//     // ... rest of your mock route code
-    
-//     if (!req.file) {
-//       return next(new AppError("No file uploaded", 400));
-//     }
-
-//     if (req.user.credits <= 0) {
-//       try {
-//         fs.unlinkSync(req.file.path);
-//       } catch (e) {}
-//       return next(new AppError("Insufficient credits", 403));
-//     }
-
-//     try {
-//       const fileRecord = await File.create({
-//         filename: req.file.filename,
-//         originalName: req.file.originalname,
-//         uploadThingKey: `fallback-${Date.now()}`,
-//         uploadThingUrl: `/uploads/${req.file.filename}`,
-//         fileType: "image",
-//         mimeType: req.file.mimetype,
-//         size: req.file.size,
-//         userId: req.user.id,
-//         metadata: {
-//           format: req.file.mimetype.split("/")[1],
-//           uploadMethod: "uploadthing",
-//         },
-//       });
-
-//       console.log("✅ Fallback upload saved:", fileRecord._id);
-
-//       res.status(200).json({
-//         fileId: fileRecord._id.toString(),
-//         url: `/uploads/${req.file.filename}`,
-//         key: `fallback-${Date.now()}`,
-//         success: true,
-//         message: "Upload successful (fallback mode)",
-//       });
-      
-//     } catch (error) {
-//       console.error("❌ Fallback upload error:", error);
-//       try {
-//         fs.unlinkSync(req.file.path);
-//       } catch (e) {}
-//       return next(new AppError("Upload failed", 500));
-//     }
-//   }));
-// }
-
-
-// =============================================================================
-// ✅ UPLOADTHING DIRECT API APPROACH (UTApi)
-// =============================================================================
-
+// upload thing service
 const uploadthingService = require('../services/uploadthingService');
 
 router.post("/uploadthing", auth, upload.single("files"), catchAsync(async (req, res, next) => {
   console.log("🌐 UploadThing Direct API route called");
+    console.log("👤 User ID:", req.user.id);
+    console.log("👤 User credits at start:", req.user.credits);
 
   if (!req.file) {
     return next(new AppError("No file uploaded", 400));
@@ -434,7 +201,40 @@ router.post("/uploadthing", auth, upload.single("files"), catchAsync(async (req,
 
     console.log('💾 UploadThing file record saved:', fileRecord._id);
     console.log('🌐 File available at:', uploadResult.url);
+    console.log("💳 Starting credit deduction...");
+    console.log("💳 User ID for credit deduction:", req.user.id);
 
+     const currentUser = await User.findById(req.user.id);
+     console.log("💳 Current user credits in DB:", currentUser?.credits);
+
+     if (!currentUser) {
+       throw new Error("User not found for credit deduction");
+     }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id ,
+      {
+        $inc : {credits:-1}
+      },
+      {new : true,
+        runValidators:true
+      }
+    )
+    console.log('💳 Credit deducted! User credits:', req.user.credits, '→', updatedUser.credits);
+     console.log("  - Before:", currentUser.credits);
+     console.log("  - After:", updatedUser?.credits);
+     console.log("  - Update successful:", !!updatedUser);
+
+      if (!updatedUser) {
+        throw new Error("Failed to update user credits");
+      }
+
+      // Verify the update worked
+      const verifyUser = await User.findById(req.user.id);
+      console.log(
+        "💳 Verification - DB credits after update:",
+        verifyUser?.credits
+      );
     // Clean up local file
     try {
       fs.unlinkSync(req.file.path);
@@ -450,7 +250,14 @@ router.post("/uploadthing", auth, upload.single("files"), catchAsync(async (req,
       key: uploadResult.key,
       success: true,
       message: "Successfully uploaded to UploadThing cloud via UTApi!",
-      uploadMethod: "uploadthing-utapi"
+      uploadMethod: "uploadthing-utapi",
+      creditsRemaining: updatedUser.credits,
+      creditsUsed: 1,
+      creditUpdate: {
+        before: currentUser.credits,
+        after: updatedUser.credits,
+        deducted: 1,
+      },
     });
 
   } catch (uploadError) {

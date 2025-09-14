@@ -32,6 +32,7 @@ const auth = async (req,res,next) => {
               message: "User not found, token invalid",
             });
         }
+         console.log("🔐 Auth middleware - User credits:", user.credits);
 
         if(!user.isActive){
             return res.status(401).json({
