@@ -9,12 +9,16 @@ const PaymentSchema = new mongoose.Schema(
     },
 
     // Dodo Payments Fields
+    // dodoPaymentId: {
+    //   type: String,
+    //   required: true,
+    //   unique: true,
+    // },
     dodoPaymentId: {
       type: String,
-      required: true,
-      unique: true,
+      required: false, // ✅ Change from required: true to required: false
+      default: "", // ✅ Add default empty string
     },
-
     dodoCustomerId: {
       type: String,
       required: false,
@@ -51,7 +55,7 @@ const PaymentSchema = new mongoose.Schema(
     planType: {
       type: String,
       required: true,
-      enum: ["starter", "pro", "premium", "enterprise",'credits'],
+      enum: ["starter", "pro", "premium", "enterprise", "credits"],
     },
 
     // Payment Method

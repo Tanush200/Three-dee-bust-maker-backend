@@ -4,6 +4,7 @@ const { catchAsync, AppError } = require("../middleware/errorHandler");
 const User = require("../models/User");
 const Payment = require("../models/Payment");
 
+
 // Get pricing plans
 const getPricingPlans = catchAsync(async (req, res) => {
   res.status(200).json({
@@ -169,66 +170,105 @@ const handleWebhook = catchAsync(async (req, res) => {
 });
 
 // Buy credits directly (one-time purchase)
+// const buyCredits = catchAsync(async (req, res) => {
+//   const { amount, credits } = req.body;
+//   const userId = req.user.id || req.user._id;
+//     console.log("💳 Buy credits request:", {
+//       userId: userId,
+//       username: req.user.username,
+//       amount: amount,
+//       credits: credits,
+//       hasUser: !!req.user,
+//     });
+//  if (!userId) {
+//    return res.status(401).json({
+//      success: false,
+//      error: "User ID not found in request",
+//    });
+//  }
+
+//   // Validate credit packages
+//   const validPackages = {
+//     25: { amount: 9.99, credits: 25 },
+//     50: { amount: 19.99, credits: 50 },
+//     100: { amount: 34.99, credits: 100 },
+//     250: { amount: 79.99, credits: 250 },
+//   };
+
+//   const packageInfo = validPackages[credits];
+//   if (!packageInfo || packageInfo.amount !== amount) {
+//     return res.status(400).json({
+//       success: false,
+//       error: "Invalid credit package",
+//     });
+//   }
+
+//   // Create payment intent for credits
+//   const payment = new Payment({
+//     userId: userId,
+//     dodoPaymentId: "", // Will be updated
+//     amount: amount,
+//     currency: "USD",
+//     creditsAmount: credits,
+//     planType: "credits",
+//     status: "pending",
+//     metadata: {
+//       planName: `${credits} Credits`,
+//       originalPrice: amount,
+//       paymentSource: "credit_purchase",
+//     },
+//   });
+
+//   await payment.save();
+
+//   // Create Dodo Payment Intent
+//   const dodoResponse = await paymentService.createCreditPaymentIntent(
+//     payment._id,
+//     amount,
+//     credits,
+//     userId
+//   );
+
+//   payment.dodoPaymentId = dodoResponse.id;
+//   await payment.save();
+
+//   res.status(201).json({
+//     success: true,
+//     message: "Credit purchase initiated",
+//     data: {
+//       paymentId: payment._id,
+//       checkoutUrl: dodoResponse.url,
+//       sessionId: dodoResponse.id,
+//       amount: amount,
+//       credits: credits,
+//     },
+//   });
+// });
+
 const buyCredits = catchAsync(async (req, res) => {
-  const { amount, credits } = req.body;
-  const userId = req.user.id;
+  console.log("🎯 BuyCredits function called");
+  console.log("📝 Request body:", req.body);
+  console.log("👤 Request user:", req.user ? req.user.username : "No user");
 
-  // Validate credit packages
-  const validPackages = {
-    25: { amount: 9.99, credits: 25 },
-    50: { amount: 19.99, credits: 50 },
-    100: { amount: 34.99, credits: 100 },
-    250: { amount: 79.99, credits: 250 },
-  };
+  try {
+    const { amount, credits } = req.body;
+    const userId = req.user.id || req.user._id;
 
-  const packageInfo = validPackages[credits];
-  if (!packageInfo || packageInfo.amount !== amount) {
-    return res.status(400).json({
-      success: false,
-      error: "Invalid credit package",
+    console.log("💳 Processing buy credits:", {
+      userId,
+      amount,
+      credits,
+      userExists: !!req.user,
     });
+
+    // ... rest of your function
+  } catch (error) {
+    console.error("❌ CRITICAL ERROR in buyCredits:", error);
+    console.error("❌ Error stack:", error.stack);
+    throw error; // This will be caught by catchAsync
   }
-
-  // Create payment intent for credits
-  const payment = new Payment({
-    userId: userId,
-    dodoPaymentId: "", // Will be updated
-    amount: amount,
-    currency: "USD",
-    creditsAmount: credits,
-    planType: "credits",
-    status: "pending",
-    metadata: {
-      planName: `${credits} Credits`,
-      originalPrice: amount,
-      paymentSource: "credit_purchase",
-    },
-  });
-
-  await payment.save();
-
-  // Create Dodo Payment Intent
-  const dodoResponse = await paymentService.createCreditPaymentIntent(
-    payment._id,
-    amount,
-    credits,
-    userId
-  );
-
-  payment.dodoPaymentId = dodoResponse.id;
-  await payment.save();
-
-  res.status(201).json({
-    success: true,
-    message: "Credit purchase initiated",
-    data: {
-      paymentId: payment._id,
-      clientSecret: dodoResponse.client_secret,
-      amount: amount,
-      credits: credits,
-    },
-  });
 });
+
 
 module.exports = {
   getPricingPlans,
