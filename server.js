@@ -9,6 +9,7 @@ const morgan = require('morgan')
 const { errorHandler , notFound } = require('./middleware/errorHandler')
 const {generalLimiter} = require('./middleware/rateLimiter')
 const uploadRoute = require('./routes/upload')
+const ai3dRoutes = require("./routes/ai3d");
 
 
 dotenv.config();
@@ -76,7 +77,11 @@ if (process.env.NODE_ENV === "development"){
 app.use('/api/auth',require('./routes/auth'));
 app.use('/api/projects',require('./routes/projects'))
 app.use('/api/upload',uploadRoute)
-app.use('/{*splat}',notFound);
+app.use("/api/ai3d", ai3dRoutes);
+// app.use('/{*splat}',notFound);
+// app.all('*',notFound);
+app.use(notFound)
+
 app.use(errorHandler);
 
 
@@ -91,10 +96,10 @@ process.on("SIGTERM", () => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`🚀 Server running on port ${PORT}`);
+//   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+// });
 
 
 app.listen(PORT, () => {
@@ -106,4 +111,5 @@ app.listen(PORT, () => {
   console.log(`   - /api/auth`);
   console.log(`   - /api/projects`);
   console.log(`   - /api/upload`);
+   console.log(`   - /api/ai3d`); 
 });
