@@ -78,6 +78,7 @@ app.use('/api/auth',require('./routes/auth'));
 app.use('/api/projects',require('./routes/projects'))
 app.use('/api/upload',uploadRoute)
 app.use("/api/ai3d", ai3dRoutes);
+app.use("/api/payments", require("./routes/payments"));
 // app.use('/{*splat}',notFound);
 // app.all('*',notFound);
 app.use(notFound)
