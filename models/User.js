@@ -301,7 +301,7 @@ const UserSchema = new mongoose.Schema(
 UserSchema.index({ email: 1 });
 UserSchema.index({ username: 1 });
 UserSchema.index({ subscriptionStatus: 1 });
-UserSchema.index({ dodoCustomerId: 1 });
+UserSchema.index({ dodoCustomerId: 1 }, { unique: true, sparse: true });
 
 // ✅ NEW VIRTUAL FIELDS
 UserSchema.virtual("availableCredits").get(function () {
